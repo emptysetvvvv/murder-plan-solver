@@ -32,7 +32,8 @@ state = State(
     h=0,               # Key Person intrigue
 )
 
-result = Solver().solve(state, day=3)
+solver = Solver()
+result = solver.solve(state, day=3)
 
 print(result.win_rate)
 print(result.strategy)
@@ -57,8 +58,12 @@ action = result.pick(rng.random())
 Calculate average win rates over all 16 initial position pairs:
 
 ```python
-rates = Solver().average_win_rates(range(3, 9))
+rates = solver.average_win_rates(range(3, 9))
 ```
+
+A `Solver` instance keeps an in-memory cache of previously computed
+`(state, day)` values. Reuse the same instance for repeated or consecutive
+queries. Call `solver.clear_cache()` to release it.
 
 ## Command Line
 

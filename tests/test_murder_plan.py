@@ -100,6 +100,19 @@ class SolverTests(unittest.TestCase):
     def test_average_interface(self):
         self.assertEqual(Solver().average_win_rates((0, 1)), {0: 0.0, 1: 0.0})
 
+    def test_solver_cache(self):
+        solver = Solver()
+        first = solver.solve(State(), day=2)
+        info = solver.cache_info()
+        self.assertGreater(info["values"], 0)
+        self.assertIs(solver.solve(State(), day=2), first)
+
+        solver.clear_cache()
+        self.assertEqual(
+            solver.cache_info(),
+            {"values": 0, "results": 0, "average_rates": 1},
+        )
+
     def test_three_day_regression(self):
         result = Solver().solve(State(), day=3)
         self.assertAlmostEqual(result.win_rate, 0.134346591935461, places=12)

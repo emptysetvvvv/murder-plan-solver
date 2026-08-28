@@ -10,14 +10,41 @@ from .rules import _next_states, _turn_data, _validate_state, _winning
 class Solver:
     def __init__(self, tolerance: float = 1e-9) -> None:
         self.tolerance = tolerance
+        self._values: dict[tuple[State, int], float] = {}
+        self._results: dict[tuple[State, int], Result] = {}
+        self._average_rates: dict[int, float] = {0: 0.0}
+
+    def clear_cache(self) -> None:
+        self._values.clear()
+        self._results.clear()
+        self._average_rates = {0: 0.0}
+
+    def cache_info(self) -> dict[str, int]:
+        return {
+            "values": len(self._values),
+            "results": len(self._results),
+            "average_rates": len(self._average_rates),
+        }
 
     def solve(self, state: State | None = None, day: int = 7) -> Result:
         state = State() if state is None else state
         _validate_state(state)
         if day < 0:
             raise ValueError("day must be zero or greater")
+
+        key = state, day
+        if key in self._results:
+            return self._results[key]
         if _winning(state) or day == 0:
-            return Result(state, day, float(_winning(state)), ())
+            result = Result(state, day, float(_winning(state)), ())
+            self._results[key] = result
+            return result
+
+        if key in self._values:
+            result = self._cached_result(state, day)
+            if result is not None:
+                self._results[key] = result
+                return result
 
         layers = _reachable_layers((state,), day)
         next_values: dict[State, float] | None = None
@@ -26,10 +53,16 @@ class Solver:
 
         for layer_index in range(day - 1, -1, -1):
             values: dict[State, float] = {}
+            remaining = day - layer_index
             for current in sorted(layers[layer_index]):
+                current_key = current, remaining
+                if current_key in self._values and layer_index != 0:
+                    values[current] = self._values[current_key]
+                    continue
                 matrix = _payoff_matrix(current, next_values)
                 value, probabilities = _matrix_game(matrix)
                 values[current] = value
+                self._values[current_key] = value
                 if layer_index == 0:
                     first_value = value
                     first_strategy = _strategy(
@@ -39,7 +72,31 @@ class Solver:
                     )
             next_values = values
 
-        return Result(state, day, first_value, first_strategy)
+        result = Result(state, day, first_value, first_strategy)
+        self._results[key] = result
+        return result
+
+    def _cached_result(self, state: State, day: int) -> Result | None:
+        next_values: dict[State, float] | None = None
+        if day > 1:
+            next_values = {}
+            for effect in _turn_data(state).effects:
+                for candidate in _next_states(state, effect):
+                    if _winning(candidate):
+                        continue
+                    key = candidate, day - 1
+                    if key not in self._values:
+                        return None
+                    next_values[candidate] = self._values[key]
+
+        matrix = _payoff_matrix(state, next_values)
+        _, probabilities = _matrix_game(matrix)
+        strategy = _strategy(
+            probabilities,
+            _turn_data(state).alice_actions,
+            self.tolerance,
+        )
+        return Result(state, day, self._values[(state, day)], strategy)
 
     def average_win_rate(self, day: int = 7) -> float:
         return self.average_win_rates((day,))[day]
@@ -52,11 +109,12 @@ class Solver:
             or requested[0] < 0
         ):
             raise ValueError("days must contain non-negative integers")
+        if all(day in self._average_rates for day in requested):
+            return {day: self._average_rates[day] for day in requested}
 
-        rates = {0: 0.0} if 0 in requested else {}
         max_day = requested[-1]
         if max_day == 0:
-            return rates
+            return {0: 0.0}
 
         initial = tuple(State(x=x, y=y) for x in range(4) for y in range(4))
         layers = _reachable_layers(initial, max_day)
@@ -64,15 +122,22 @@ class Solver:
 
         for layer_index in range(max_day - 1, -1, -1):
             values: dict[State, float] = {}
+            remaining = max_day - layer_index
             for state in sorted(layers[layer_index]):
+                key = state, remaining
+                if key in self._values:
+                    values[state] = self._values[key]
+                    continue
                 matrix = _payoff_matrix(state, next_values)
-                values[state] = _matrix_game(matrix)[0]
-            day = max_day - layer_index
-            if day in requested:
-                rates[day] = sum(values[state] for state in initial) / len(initial)
+                value = _matrix_game(matrix)[0]
+                values[state] = value
+                self._values[key] = value
+            self._average_rates[remaining] = (
+                sum(values[state] for state in initial) / len(initial)
+            )
             next_values = values
 
-        return {day: rates[day] for day in requested}
+        return {day: self._average_rates[day] for day in requested}
 
 
 def _reachable_layers(initial: tuple[State, ...], day: int) -> list[set[State]]:
