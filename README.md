@@ -61,7 +61,7 @@ Calculate average win rates over all 16 initial position pairs:
 rates = solver.average_win_rates(range(3, 9))
 ```
 
-A `Solver` instance keeps an in-memory cache of previously computed
+A `Solver` instance keeps an in-memory cache of solved payoff matrices and computed
 `(state, day)` values. Reuse the same instance for repeated or consecutive
 queries. Call `solver.clear_cache()` to release it.
 

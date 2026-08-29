@@ -1,3 +1,4 @@
+import hashlib
 from collections.abc import Iterable
 
 import numpy as np
@@ -7,23 +8,41 @@ from .model import Action, Result, State, Strategy
 from .rules import _next_states, _turn_data, _validate_state, _winning
 
 
+def _swap_position(value: int) -> int:
+    return ((value & 1) << 1) | ((value >> 1) & 1)
+
+
+def _value_key(state: State, day: int) -> tuple[State, int]:
+    swapped = state._replace(
+        x=_swap_position(state.x),
+        y=_swap_position(state.y),
+    )
+    return min(state, swapped), day
+
+
 class Solver:
     def __init__(self, tolerance: float = 1e-9) -> None:
         self.tolerance = tolerance
         self._values: dict[tuple[State, int], float] = {}
         self._results: dict[tuple[State, int], Result] = {}
         self._average_rates: dict[int, float] = {0: 0.0}
+        self._matrix_games: dict[
+            tuple[tuple[int, int], bytes],
+            tuple[float, np.ndarray],
+        ] = {}
 
     def clear_cache(self) -> None:
         self._values.clear()
         self._results.clear()
         self._average_rates = {0: 0.0}
+        self._matrix_games.clear()
 
     def cache_info(self) -> dict[str, int]:
         return {
             "values": len(self._values),
             "results": len(self._results),
             "average_rates": len(self._average_rates),
+            "matrix_games": len(self._matrix_games),
         }
 
     def solve(self, state: State | None = None, day: int = 7) -> Result:
@@ -40,7 +59,8 @@ class Solver:
             self._results[key] = result
             return result
 
-        if key in self._values:
+        value_key = _value_key(state, day)
+        if value_key in self._values:
             result = self._cached_result(state, day)
             if result is not None:
                 self._results[key] = result
@@ -55,12 +75,12 @@ class Solver:
             values: dict[State, float] = {}
             remaining = day - layer_index
             for current in sorted(layers[layer_index]):
-                current_key = current, remaining
+                current_key = _value_key(current, remaining)
                 if current_key in self._values and layer_index != 0:
                     values[current] = self._values[current_key]
                     continue
                 matrix = _payoff_matrix(current, next_values)
-                value, probabilities = _matrix_game(matrix)
+                value, probabilities = self._solve_matrix(matrix)
                 values[current] = value
                 self._values[current_key] = value
                 if layer_index == 0:
@@ -84,19 +104,26 @@ class Solver:
                 for candidate in _next_states(state, effect):
                     if _winning(candidate):
                         continue
-                    key = candidate, day - 1
+                    key = _value_key(candidate, day - 1)
                     if key not in self._values:
                         return None
                     next_values[candidate] = self._values[key]
 
         matrix = _payoff_matrix(state, next_values)
-        _, probabilities = _matrix_game(matrix)
+        _, probabilities = self._solve_matrix(matrix)
         strategy = _strategy(
             probabilities,
             _turn_data(state).alice_actions,
             self.tolerance,
         )
-        return Result(state, day, self._values[(state, day)], strategy)
+        return Result(state, day, self._values[_value_key(state, day)], strategy)
+
+    def _solve_matrix(self, matrix: np.ndarray) -> tuple[float, np.ndarray]:
+        digest = hashlib.blake2b(matrix, digest_size=32).digest()
+        key = matrix.shape, digest
+        if key not in self._matrix_games:
+            self._matrix_games[key] = _matrix_game(matrix)
+        return self._matrix_games[key]
 
     def average_win_rate(self, day: int = 7) -> float:
         return self.average_win_rates((day,))[day]
@@ -124,12 +151,12 @@ class Solver:
             values: dict[State, float] = {}
             remaining = max_day - layer_index
             for state in sorted(layers[layer_index]):
-                key = state, remaining
+                key = _value_key(state, remaining)
                 if key in self._values:
                     values[state] = self._values[key]
                     continue
                 matrix = _payoff_matrix(state, next_values)
-                value = _matrix_game(matrix)[0]
+                value = self._solve_matrix(matrix)[0]
                 values[state] = value
                 self._values[key] = value
             self._average_rates[remaining] = (
@@ -191,6 +218,7 @@ def _matrix_game(matrix: np.ndarray) -> tuple[float, np.ndarray]:
         b_eq=np.ones(1),
         bounds=[(0.0, 1.0)] * rows + [(0.0, 1.0)],
         method="highs",
+        options={"presolve": False},
     )
     if not result.success:
         raise RuntimeError(result.message)

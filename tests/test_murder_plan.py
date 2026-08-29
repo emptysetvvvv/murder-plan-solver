@@ -100,17 +100,26 @@ class SolverTests(unittest.TestCase):
     def test_average_interface(self):
         self.assertEqual(Solver().average_win_rates((0, 1)), {0: 0.0, 1: 0.0})
 
+    def test_horizontal_vertical_symmetry(self):
+        horizontal = State(x=HORIZONTAL, y=VERTICAL, c=3, h=1)
+        vertical = State(x=VERTICAL, y=HORIZONTAL, c=3, h=1)
+        left = Solver().solve(horizontal, day=1).win_rate
+        right = Solver().solve(vertical, day=1).win_rate
+        self.assertAlmostEqual(left, right, places=12)
+
     def test_solver_cache(self):
         solver = Solver()
         first = solver.solve(State(), day=2)
         info = solver.cache_info()
         self.assertGreater(info["values"], 0)
+        self.assertGreater(info["matrix_games"], 0)
+        self.assertLess(info["matrix_games"], info["values"])
         self.assertIs(solver.solve(State(), day=2), first)
 
         solver.clear_cache()
         self.assertEqual(
             solver.cache_info(),
-            {"values": 0, "results": 0, "average_rates": 1},
+            {"values": 0, "results": 0, "average_rates": 1, "matrix_games": 0},
         )
 
     def test_three_day_regression(self):
