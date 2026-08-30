@@ -96,6 +96,34 @@ class Solver:
         self._results[key] = result
         return result
 
+    def choose_action(self, state: State | None = None, day: int = 7, random_value: float | None = None) -> Action:
+        return self.solve(state, day).pick(random_value)
+
+    def choose_ability(self, post_card_state: State, day: int) -> str | None:
+        _validate_state(post_card_state)
+        if day < 1:
+            raise ValueError("day must be one or greater when choosing an ability")
+        if _winning(post_card_state):
+            return None
+
+        candidates: dict[str | None, State] = {None: post_card_state}
+        if post_card_state.x == post_card_state.y and post_card_state.c < 4:
+            candidates["K"] = post_card_state._replace(c=post_card_state.c + 1)
+        if post_card_state.x == 0 and post_card_state.h < 2:
+            candidates["P"] = post_card_state._replace(h=post_card_state.h + 1)
+
+        def score(state: State) -> float:
+            return 1.0 if _winning(state) else (0.0 if day == 1 else self.solve(state, day - 1).win_rate)
+
+        scores = {name: score(s) for name, s in candidates.items()}
+        best = max(scores.values())
+
+        for target in ("K", "P", None):
+            if target in scores and best - scores[target] <= self.tolerance:
+                return target
+
+        return None
+
     def _cached_result(self, state: State, day: int) -> Result | None:
         next_values: dict[State, float] | None = None
         if day > 1:

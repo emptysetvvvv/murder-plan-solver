@@ -90,6 +90,45 @@ class SolverTests(unittest.TestCase):
             result.pick(random.Random(123).random()),
         )
 
+    def test_choose_action_uses_the_solved_distribution(self):
+        solver = Solver()
+        state = State(c=3)
+        self.assertEqual(
+            solver.choose_action(state, day=1, random_value=0.42),
+            solver.solve(state, day=1).pick(0.42),
+        )
+
+    def test_choose_ability(self):
+        solver = Solver()
+
+        # Both targets win immediately, so the stable K > P > None order wins.
+        self.assertEqual(
+            solver.choose_ability(State(x=0, y=0, c=3, h=1), day=1),
+            "K",
+        )
+
+        # A full Key Person track does not hide an available Killer target.
+        self.assertEqual(
+            solver.choose_ability(
+                State(x=HORIZONTAL, y=HORIZONTAL, c=2, h=2),
+                day=1,
+            ),
+            "K",
+        )
+
+        # Future values, rather than only immediate wins, decide the target.
+        self.assertEqual(
+            solver.choose_ability(
+                State(x=HORIZONTAL, y=HORIZONTAL, c=1),
+                day=2,
+            ),
+            "K",
+        )
+
+        self.assertIsNone(solver.choose_ability(State(y=0, h=2), day=3))
+        with self.assertRaises(ValueError):
+            solver.choose_ability(State(), day=0)
+
     def test_terminal_states(self):
         solver = Solver()
         self.assertEqual(solver.solve(State(), day=0).win_rate, 0.0)
