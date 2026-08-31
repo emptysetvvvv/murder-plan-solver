@@ -145,10 +145,10 @@ the solver package.
 
 One cold-process measurement in the development environment produced:
 
-| Step | Time |
-| --- | ---: |
-| Import and load `murder_plan_lookup` | 0.166 s |
-| First strategy and Brain queries | 0.000031 s |
+| Step                              | Time   |
+|-----------------------------------|--------|
+| Import and load lookup            | 166 ms |
+| First strategy and Brain queries  | 31 µs  |
 
 Times depend on the machine and filesystem cache. The compressed JSON file is
 about 1.23 MB and contains 17,639 start-of-day strategies and 26,678 post-card
