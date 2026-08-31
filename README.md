@@ -44,6 +44,9 @@ result = solver.solve(state, day)          # Win rate and mixed strategy
 action = solver.choose_action(state, day)  # One sampled action
 ```
 
+The separate `murder_plan_lookup` package provides direct disk lookup for the
+fixed eight-day game above. See its [integration guide](src/murder_plan_lookup/README.md).
+
 ## Model and State
 
 The model contains a Key Person (`P`), Brain (`B`), and Killer (`K`) on a 2 x 2
@@ -149,8 +152,8 @@ print(solver.cache_info())
 solver.clear_cache()
 ```
 
-The cache is kept in memory only; this project does not ship a precomputed
-strategy table.
+The solver cache is kept in memory only. Fixed-game lookup is provided by the
+separate `murder_plan_lookup` package.
 
 ## Command Line
 

@@ -85,8 +85,6 @@ def _print_result(result: Result, random_value: float | None) -> None:
             f"{cards['P']:<16} {cards['B']:<16} {cards['K']:<16}"
         )
 
-    if random_value is None:
-        raise RuntimeError("missing random value")
     action = result.pick(random_value)
     cards = action.to_dict()
     print(f"\nRandom value: {random_value:.12f}")

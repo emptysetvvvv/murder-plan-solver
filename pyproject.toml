@@ -19,3 +19,5 @@ murder-plan = "murder_plan.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+murder_plan_lookup = ["README.md", "data/*.json.gz"]
