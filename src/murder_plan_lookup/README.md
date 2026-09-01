@@ -25,7 +25,8 @@ state = INITIAL_STATE
 day = INITIAL_DAY
 ```
 
-The package loads the table once when it is imported.
+The package loads the table once when it is imported. Killer and Key Person
+intrigue values are automatically capped at `4` and `2` when queried.
 
 ## Select Alice's cards
 

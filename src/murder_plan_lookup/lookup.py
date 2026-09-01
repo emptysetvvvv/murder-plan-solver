@@ -37,6 +37,10 @@ def _cards(action: list[int]) -> dict[str, str]:
     return {"P": CARDS[action[0]], "B": CARDS[action[1]], "K": CARDS[action[2]]}
 
 
+def _lookup_key(state: State, day: int) -> tuple[State, int]:
+    return state._replace(c=min(state.c, 4), h=min(state.h, 2)), day
+
+
 data_file = resources.files("murder_plan_lookup").joinpath(
     "data/d8_x01_y10.json.gz"
 )
@@ -59,7 +63,7 @@ del data
 
 def _find_strategy(state: State, day: int) -> tuple[float, list]:
     try:
-        return _STRATEGIES[state, day]
+        return _STRATEGIES[_lookup_key(state, day)]
     except KeyError as exc:
         raise ValueError("state is outside the fixed lookup table") from exc
 
@@ -89,6 +93,6 @@ def choose_action(
 
 def choose_ability(post_card_state: State, day: int) -> str | None:
     try:
-        return _ABILITIES[post_card_state, day]
+        return _ABILITIES[_lookup_key(post_card_state, day)]
     except KeyError as exc:
         raise ValueError("post-card state is outside the fixed lookup table") from exc

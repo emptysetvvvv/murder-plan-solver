@@ -37,6 +37,10 @@ class LookupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             choose_ability(State(c=3), 8)
 
+    def test_intrigue_is_capped(self):
+        state = State(x=2, y=2, c=3, h=2, intrigue_2=False, forbid_moves=2)
+        self.assertEqual(get_strategy(state._replace(h=3), 6), get_strategy(state, 6))
+
     def test_lookup_does_not_import_solver(self):
         code = (
             "import sys; import murder_plan_lookup; "
