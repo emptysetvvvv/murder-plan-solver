@@ -8,10 +8,10 @@ This is an unofficial fan-made project and is not affiliated with the
 publisher or rights holders of *Tragedy Looper*.
 
 Ready to test your skills? The AI mastermind from this solver 
-is now live in the BTX-132: *Laplace’s Witch* script — 
+is now live in the FS-27: *Laplace’s Witch* script — 
 come and challenge it at [tragic-aiplay.cn](https://tragic-aiplay.cn)
 
-使用该策略的 AI 剧作家已实装，前往 [tragic-aiplay.cn](https://tragic-aiplay.cn) 的 BTX-132《拉普拉斯的魔女》挑战它吧！
+使用该策略的 AI 剧作家已实装，前往 [tragic-aiplay.cn](https://tragic-aiplay.cn) 的 FS-27《拉普拉斯的魔女》挑战它吧！
 
 ## Quick Start
 
